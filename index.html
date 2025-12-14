@@ -1,138 +1,386 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Parquet File Explorer</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    .segment-card {
-      font-family: sans-serif;
-      white-space: pre-wrap;
-      padding: 1rem;
-    }
-    textarea {
-      width: 100%;
-      resize: vertical;
-    }
-    audio {
-      width: 100%;
-      margin-top: 0.5rem;
-    }
-  </style>
-</head>
-<body class="p-4">
-  <div class="container">
-    <h2 class="mb-4">Parquet Segment Explorer</h2>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSML Annotation</title>
 
-    <!-- Parquet File Dropdown -->
-    <div class="mb-3">
-      <label class="form-label">Parquet File:</label>
-      <select id="parquetSelect" class="form-select">
-        <option selected disabled>Loading...</option>
-      </select>
+    <!-- Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    />
+
+    <style>
+      body {
+        background: #fafafa;
+      }
+      .bg-gray {
+        background-color: rgba(231, 231, 232, 0.4);
+      }
+      textarea {
+        resize: vertical;
+        font-family: monospace;
+      }
+      .rendered-transcript {
+        background: #f9f9f9;
+        height: 150px;
+        overflow-y: auto;
+        border-radius: 6px;
+        padding: 0.75rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container mt-4">
+      <h4 class="text-center mb-4">
+        RSML Annotator
+        <button
+          type="button"
+          class="btn btn-outline-primary btn-sm ms-2"
+          data-bs-toggle="modal"
+          data-bs-target="#guidelinesModal"
+        >
+          <i class="bi bi-keyboard"></i> Shortcuts
+        </button>
+        <div class="text-end my-3">
+          <button id="saveBtn" class="btn btn-success">
+            <i class="bi bi-save"></i> Save RSML
+          </button>
+        </div>
+      </h4>
+      <div class="row mb-4">
+        <div class="col-md-5">
+          <label class="form-label">Batch</label>
+          <select id="batchSelect" class="form-select"></select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">File Number</label>
+          <select id="fileSelect" class="form-select" disabled></select>
+        </div>
+
+        <!-- ⬇️ NEW Load Button -->
+        <div class="col-md-2 d-flex align-items-end">
+          <button id="loadBtn" class="btn btn-primary w-100">
+            Load
+          </button>
+      </div>
+      <!-- Batch + File Select -->
+      <div class="col-12 mt-3 d-flex gap-2 justify-content-between">
+        <div class="d-flex gap-2">
+          <button id="prevBtn" class="btn btn-outline-secondary">
+            <i class="bi bi-chevron-left"></i> Prev
+          </button>
+          <button id="nextBtn" class="btn btn-outline-secondary">
+            Next <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      
+      </div>
+
+      <!-- Segments -->
+      <div id="segmentContainer"></div>
+    </div>
     </div>
 
-    <!-- File Number Dropdown -->
-    <div class="mb-3">
-      <label class="form-label">File Number:</label>
-      <select id="fileSelect" class="form-select" disabled>
-        <option selected disabled>Select a parquet first</option>
-      </select>
+    <!-- =================== RSML MODAL =================== -->
+    <div class="modal fade" id="guidelinesModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title fw-semibold">RSML Annotation Shortcuts</h6>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body small">
+            <p><strong>@ — Noise / Disfluency</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>@noise</code>, <code>@background-laughter</code>,
+              <code>@umm</code>, <code>@cough</code>
+            </p>
+            <p><strong># — Entities</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>#PER{राम}(राम)</code><br />
+              <code>#ORG{भारतीय रेल्वे}(Indian Railways)</code><br />
+              <code>#GPE{रायालसीमा}(రాయలసీమ)</code>
+            </p>
+            <p><strong>[ ] — Code-mix</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>[स्टडी](study)</code>
+            </p>
+            <p><strong>&lt; &gt; — Mispronunciation</strong></p>
+            <p class="bg-gray rounded p-2">
+              <code>&lt;समझनाहीं&gt;(समझ नहीं)</code>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- =================== TOASTER =================== -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1080">
+      <div
+        id="toastContainer"
+        class="toast align-items-center text-bg-primary border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div class="d-flex">
+          <div class="toast-body" id="toastMessage">Saved successfully!</div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
     </div>
 
-    <!-- Segment Data -->
-    <div class="mb-3">
-      <label class="form-label">Segments:</label>
-      <ul id="segmentList" class="list-group"></ul>
+    <!-- =================== LOADER OVERLAY =================== -->
+    <div
+      id="loaderOverlay"
+      class="position-fixed top-0 start-0 w-100 h-100 d-none d-flex justify-content-center align-items-center bg-white bg-opacity-75"
+      style="z-index: 2000"
+    >
+      <div
+        class="spinner-border text-primary"
+        role="status"
+        style="width: 3rem; height: 3rem"
+      >
+        <span class="visually-hidden">Loading...</span>
+      </div>
     </div>
-  </div>
 
-  <script>
-    const parquetSelect = document.getElementById('parquetSelect');
-    const fileSelect = document.getElementById('fileSelect');
-    const segmentList = document.getElementById('segmentList');
+    <!-- =================== SCRIPT =================== -->
+    <script type="module">
+      import RSMLAnnotator from "https://cdn.jsdelivr.net/npm/rsml@latest/rsml.esm.js";
 
-    /* -------------------- LOAD PARQUETS -------------------- */
-    async function loadParquetFiles() {
-      const res = await fetch('/parquets');
-      const parquets = await res.json();
+      const batchSelect = document.getElementById("batchSelect");
+      const fileSelect = document.getElementById("fileSelect");
+      const segmentContainer = document.getElementById("segmentContainer");
 
-      parquetSelect.innerHTML = '<option selected disabled>Select a parquet</option>';
-      parquets.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
-        parquetSelect.appendChild(opt);
-      });
-    }
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
 
-    /* -------------------- LOAD FILES -------------------- */
-    parquetSelect.addEventListener('change', async () => {
-      const parquet = parquetSelect.value;
+      const AUDIO_BASE = "data/audio/";
 
-      const res = await fetch(`/parquet/${parquet}/files`);
-      const fileList = await res.json(); // array of file numbers
+      let batches = [];
+      let currentBatchIndex = 0;
+      let files = [];
+      let currentFileIndex = 0;
 
-      fileSelect.disabled = false;
-      fileSelect.innerHTML = '<option selected disabled>Select file</option>';
+      async function loadBatches() {
+  const res = await fetch("/batches");
+  const { max_batch } = await res.json();
 
-      fileList.forEach(fileNo => {
-        const opt = document.createElement('option');
-        opt.value = fileNo.toString();  // ensure string
-        opt.textContent = `${fileNo}`;
-        fileSelect.appendChild(opt);
-      });
+  batches = Array.from({ length: max_batch }, (_, i) => i + 1);
 
-      segmentList.innerHTML = '';
-    });
+  batchSelect.innerHTML = `<option disabled selected>Select Batch</option>`;
+  batches.forEach(b => {
+    const opt = document.createElement("option");
+    opt.value = b;
+    opt.textContent = b;
+    batchSelect.appendChild(opt);
+  });
+}
+async function loadFiles(batch) {
+  const res = await fetch(`/batch/${batch}/files`);
+  const { max_file } = await res.json();
 
-    /* -------------------- LOAD SEGMENTS -------------------- */
-    fileSelect.addEventListener('change', async () => {
-      const parquet = parquetSelect.value;
-      const file = fileSelect.value;
+  files = Array.from({ length: max_file }, (_, i) => i + 1);
 
-      const res = await fetch(`/parquet/${parquet}/file/${file}`);
-      const rows = await res.json();
+  fileSelect.disabled = false;
+  fileSelect.innerHTML = `<option disabled selected>Select File</option>`;
+  files.forEach(f => {
+    const opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f;
+    fileSelect.appendChild(opt);
+  });
+}
+      async function loadSegments() {
+        const batch = batches[currentBatchIndex];
+        const file = files[currentFileIndex];
 
-      segmentList.innerHTML = '';
+        const res = await fetch(`/batch/${batch}/file/${file}`);
+        const rows = await res.json();
 
-      if (!rows.length) {
-        segmentList.innerHTML = '<li class="list-group-item">No segments found</li>';
-        return;
+        segmentContainer.innerHTML = "";
+
+        rows.forEach((row) => {
+          const normalized = row.unsanitized_normalized || "";
+          const transcript = row.rsml || row.unsanitized_verbatim || "";
+          const audioPath = row.audio ? AUDIO_BASE + row.audio : null;
+
+          const card = document.createElement("div");
+          card.className = "card mb-4 p-3 segment-card";
+          card.dataset.segment = row.segment;
+
+          const audioHTML = audioPath
+            ? `<audio controls preload="metadata" style="width:100%">
+             <source src="${audioPath}">
+           </audio>`
+            : `<div class="text-muted small">⚠️ No audio</div>`;
+
+          card.innerHTML = `
+        <div class="mb-2 text-muted small"><strong>${normalized}</strong></div>
+        <div class="row mb-2">
+          <div class="col-md-6">
+            <textarea class="form-control tag-textarea" rows="5">${transcript}</textarea>
+          </div>
+          <div class="col-md-6">
+            <div class="rendered-transcript card p-2"></div>
+          </div>
+        </div>
+        ${audioHTML}
+      `;
+
+          segmentContainer.appendChild(card);
+
+          const ta = card.querySelector(".tag-textarea");
+          const out = card.querySelector(".rendered-transcript");
+
+          new RSMLAnnotator({ textarea: ta, output: out });
+        });
       }
 
-      rows.forEach(row => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item segment-card';
+      batchSelect.addEventListener("change", async () => {
+        currentBatchIndex = batchSelect.selectedIndex - 1;
+        await loadFiles(batches[currentBatchIndex]);
+        currentFileIndex = 0;
+        fileSelect.selectedIndex = 1;
+        // Don't load segments here
+      });
 
-        const text =
-          row.unsanitized_verbatim ||
-          row.verbatim ||
-          '';
+      fileSelect.addEventListener("change", async () => {
+        currentFileIndex = fileSelect.selectedIndex - 1;
+        // Don't load segments here
+      });
 
-        const audioBase64 = row.audio_filepath;
+      prevBtn.addEventListener("click", async () => {
+        if (currentFileIndex > 0) {
+          currentFileIndex--;
+        } else if (currentBatchIndex > 0) {
+          currentBatchIndex--;
+          await loadFiles(batches[currentBatchIndex]);
+          currentFileIndex = files.length - 1;
+        } else return;
 
-        let html = `
-          <div class="fw-bold mb-1">Segment ${row.segment}</div>
-          <textarea rows="3">${text}</textarea>
-        `;
+        batchSelect.selectedIndex = currentBatchIndex + 1;
+        fileSelect.selectedIndex = currentFileIndex + 1;
+        await loadSegments();
+      });
 
-        if (audioBase64) {
-          html += `
-            <audio controls>
-              <source src="data:audio/flac;base64,${audioBase64}">
-            </audio>
-          `;
-        } else {
-          html += `<div class="text-muted small">⚠ No audio</div>`;
+      nextBtn.addEventListener("click", async () => {
+        if (currentFileIndex < files.length - 1) {
+          currentFileIndex++;
+        } else if (currentBatchIndex < batches.length - 1) {
+          currentBatchIndex++;
+          await loadFiles(batches[currentBatchIndex]);
+          currentFileIndex = 0;
+        } else return;
+
+        batchSelect.selectedIndex = currentBatchIndex + 1;
+        fileSelect.selectedIndex = currentFileIndex + 1;
+        await loadSegments();
+      });
+
+      const loadBtn = document.getElementById("loadBtn");
+
+      loadBtn.addEventListener("click", async () => {
+        if (batchSelect.selectedIndex <= 0 || fileSelect.selectedIndex <= 0) {
+          alert("⚠️ Please select both a batch and a file.");
+          return;
         }
 
-        li.innerHTML = html;
-        segmentList.appendChild(li);
+        showLoader();
+        await loadSegments();
+        hideLoader();
       });
-    });
 
-    loadParquetFiles();
-  </script>
-</body>
+      loadBatches();
+
+      function showLoader() {
+        document.getElementById("loaderOverlay").classList.remove("d-none");
+        document
+          .querySelectorAll("button, select")
+          .forEach((el) => (el.disabled = true));
+      }
+
+      function hideLoader() {
+        document.getElementById("loaderOverlay").classList.add("d-none");
+        document
+          .querySelectorAll("button, select")
+          .forEach((el) => (el.disabled = false));
+      }
+
+      const saveBtn = document.getElementById("saveBtn");
+
+      saveBtn.addEventListener("click", async () => {
+        showLoader();
+
+        const batch = batches[currentBatchIndex];
+        const file = files[currentFileIndex];
+        const cards = document.querySelectorAll(
+          "#segmentContainer .segment-card"
+        );
+
+        const payload = [];
+
+        cards.forEach((card) => {
+          const ta = card.querySelector(".tag-textarea");
+          if (!ta) return;
+
+          payload.push({
+            segment: Number(card.dataset.segment),
+            rsml: ta.value,
+          });
+        });
+
+        const toastEl = document.getElementById("toastContainer");
+        const toastMsg = document.getElementById("toastMessage");
+        const toast = new bootstrap.Toast(toastEl);
+
+        try {
+          const res = await fetch(`/batch/${batch}/file/${file}/save`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            const msg = await res.json();
+            toastMsg.textContent = "✅ " + msg.message;
+            toastEl.classList.remove("text-bg-danger");
+            toastEl.classList.add("text-bg-success");
+          } else {
+            toastMsg.textContent = "❌ Failed to save RSML";
+            toastEl.classList.remove("text-bg-success");
+            toastEl.classList.add("text-bg-danger");
+          }
+
+          toast.show();
+        } catch (err) {
+          toastMsg.textContent = "❌ Error: Could not save RSML";
+          toastEl.classList.remove("text-bg-success");
+          toastEl.classList.add("text-bg-danger");
+          toast.show();
+        }
+
+        hideLoader();
+      });
+    </script>
+  </body>
 </html>

@@ -1,17 +1,24 @@
-import ast
-import base64
 import os
-import duckdb
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from typing import List
 
-DATA_DIR = "data/telugu"
+# ---------------- CONFIG ---------------- #
+
+DATA_CSV = "data/indicvoices_rsml_ready.csv"
+AUDIO_DIR = "data/audio"
+
+# -------------------------------------- #
 
 app = FastAPI()
 
-# --- Middleware ---
+# -------- Middleware -------- #
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,20 +26,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# --- DuckDB connection (global, fast) ---
-con = duckdb.connect(database=":memory:")
+# -------- Static Audio Serving -------- #
 
-# --- Helpers ---
-def parquet_path(name: str):
-    path = os.path.join(DATA_DIR, name)
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail=f"{name} not found")
-    return path
+if not os.path.exists(AUDIO_DIR):
+    raise FileNotFoundError(f"{AUDIO_DIR} directory not found")
 
+app.mount("/data/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
 
-# ---------------- ROUTES ---------------- #
+# -------- Load CSV -------- #
+
+if not os.path.exists(DATA_CSV):
+    raise FileNotFoundError(f"{DATA_CSV} not found")
+
+# Force batch & file as strings (IMPORTANT)
+df = pd.read_csv(DATA_CSV, dtype={"batch": str, "file": str})
+
+# -------- Routes -------- #
 
 @app.get("/", response_class=HTMLResponse)
 def serve_index():
@@ -40,50 +52,92 @@ def serve_index():
         raise HTTPException(status_code=404, detail="index.html not found")
     return open("index.html", encoding="utf-8").read()
 
+@app.get("/batches")
+def get_max_batch():
+    if "batch" not in df.columns:
+        raise HTTPException(status_code=500, detail="Missing 'batch' column")
 
-@app.get("/parquets")
-def list_parquets():
-    return sorted(f for f in os.listdir(DATA_DIR) if f.endswith(".parquet"))
+    batches = pd.to_numeric(df["batch"], errors="coerce").dropna()
 
+    if batches.empty:
+        raise HTTPException(status_code=404, detail="No batches found")
 
-@app.get("/parquet/{parquet_name}/files")
-def list_files(parquet_name: str):
-    path = parquet_path(parquet_name)
-
-    query = f"""
-        SELECT DISTINCT file
-        FROM '{path}'
-        ORDER BY file
-    """
-
-    return [row[0] for row in con.execute(query).fetchall()]
+    return {
+        "max_batch": int(batches.max())
+    }
 
 
-@app.get("/parquet/{parquet_name}/file/{file_number}")
-def get_file(parquet_name: str, file_number: int):
-    path = parquet_path(parquet_name)
+@app.get("/batch/{batch_id}/files")
+def get_max_file(batch_id: str):
+    if "file" not in df.columns:
+        raise HTTPException(status_code=500, detail="Missing 'file' column")
 
-    query = f"""
-        SELECT *
-        FROM '{path}'
-        WHERE file = {file_number}
-        ORDER BY segment
-    """
+    batch_df = df[df["batch"] == str(batch_id)]
 
-    df = con.execute(query).df()
+    if batch_df.empty:
+        raise HTTPException(status_code=404, detail=f"Batch {batch_id} not found")
 
-    if df.empty:
-        raise HTTPException(status_code=404, detail="No data")
+    files = pd.to_numeric(batch_df["file"], errors="coerce").dropna()
 
-    # Convert audio_filepath from dict → base64 string
-    if "audio_filepath" in df.columns:
-        def safe_encode(cell):
-            try:
-                audio_dict = ast.literal_eval(str(cell))
-                if isinstance(audio_dict, dict) and "bytes" in audio_dict:
-                    return base64.b64encode(audio_dict["bytes"]).decode("utf-8")
-            except:
-                return None
-        df["audio_filepath"] = df["audio_filepath"].apply(safe_encode)
+    if files.empty:
+        raise HTTPException(status_code=404, detail=f"No files for batch {batch_id}")
 
-    return df.to_dict(orient="records")
+    return {
+        "max_file": int(files.max())
+    }
+
+@app.get("/batch/{batch_id}/file/{file_number}")
+def get_file(batch_id: str, file_number: str):
+    required = {"batch", "file", "segment"}
+    missing = required - set(df.columns)
+    if missing:
+        raise HTTPException(status_code=500, detail=f"Missing columns: {missing}")
+
+    filtered = df[
+        (df["batch"] == str(batch_id)) &
+        (df["file"] == str(file_number))
+    ]
+
+    if filtered.empty:
+        raise HTTPException(status_code=404, detail="No data for given batch and file")
+
+    return JSONResponse(
+        content=(
+            filtered
+            .sort_values("segment")
+            .fillna("")
+            .to_dict(orient="records")
+        )
+    )
+# -------- RSML Save -------- #
+
+
+class RSMLSegment(BaseModel):
+    segment: int
+    rsml: str
+
+@app.post("/batch/{batch_id}/file/{file_number}/save")
+def save_rsml(batch_id: str, file_number: str, segments: List[RSMLSegment]):
+    global df
+
+    if "segment" not in df.columns:
+        raise HTTPException(status_code=500, detail="Missing 'segment' column in dataframe")
+
+    segment_map = {s.segment: s.rsml for s in segments}
+
+    # Apply update to relevant subset only
+    mask = (df["batch"] == batch_id) & (df["file"] == file_number)
+    if not mask.any():
+        raise HTTPException(status_code=404, detail="No matching rows found")
+
+    df.loc[mask, "rsml"] = df[mask].apply(
+        lambda row: segment_map.get(row["segment"], row["rsml"]),
+        axis=1
+    )
+
+    df.to_csv(DATA_CSV, index=False)
+
+    return {
+        "message": f"RSML saved for batch {batch_id}, file {file_number}",
+        "segments_updated": len(segment_map)
+    }
