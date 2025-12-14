@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Parquet File Explorer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .segment-card {
+      font-family: sans-serif;
+      white-space: pre-wrap;
+      padding: 1rem;
+    }
+    textarea {
+      width: 100%;
+      resize: vertical;
+    }
+    audio {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="container">
+    <h2 class="mb-4">Parquet Segment Explorer</h2>
+
+    <!-- Parquet File Dropdown -->
+    <div class="mb-3">
+      <label class="form-label">Parquet File:</label>
+      <select id="parquetSelect" class="form-select">
+        <option selected disabled>Loading...</option>
+      </select>
+    </div>
+
+    <!-- File Number Dropdown -->
+    <div class="mb-3">
+      <label class="form-label">File Number:</label>
+      <select id="fileSelect" class="form-select" disabled>
+        <option selected disabled>Select a parquet first</option>
+      </select>
+    </div>
+
+    <!-- Segment Data -->
+    <div class="mb-3">
+      <label class="form-label">Segments:</label>
+      <ul id="segmentList" class="list-group"></ul>
+    </div>
+  </div>
+
+  <script>
+    const parquetSelect = document.getElementById('parquetSelect');
+    const fileSelect = document.getElementById('fileSelect');
+    const segmentList = document.getElementById('segmentList');
+
+    /* -------------------- LOAD PARQUETS -------------------- */
+    async function loadParquetFiles() {
+      const res = await fetch('/parquets');
+      const parquets = await res.json();
+
+      parquetSelect.innerHTML = '<option selected disabled>Select a parquet</option>';
+      parquets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        parquetSelect.appendChild(opt);
+      });
+    }
+
+    /* -------------------- LOAD FILES -------------------- */
+    parquetSelect.addEventListener('change', async () => {
+      const parquet = parquetSelect.value;
+
+      const res = await fetch(`/parquet/${parquet}/files`);
+      const fileList = await res.json(); // array of file numbers
+
+      fileSelect.disabled = false;
+      fileSelect.innerHTML = '<option selected disabled>Select file</option>';
+
+      fileList.forEach(fileNo => {
+        const opt = document.createElement('option');
+        opt.value = fileNo.toString();  // ensure string
+        opt.textContent = `${fileNo}`;
+        fileSelect.appendChild(opt);
+      });
+
+      segmentList.innerHTML = '';
+    });
+
+    /* -------------------- LOAD SEGMENTS -------------------- */
+    fileSelect.addEventListener('change', async () => {
+      const parquet = parquetSelect.value;
+      const file = fileSelect.value;
+
+      const res = await fetch(`/parquet/${parquet}/file/${file}`);
+      const rows = await res.json();
+
+      segmentList.innerHTML = '';
+
+      if (!rows.length) {
+        segmentList.innerHTML = '<li class="list-group-item">No segments found</li>';
+        return;
+      }
+
+      rows.forEach(row => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item segment-card';
+
+        const text =
+          row.unsanitized_verbatim ||
+          row.verbatim ||
+          '';
+
+        const audioBase64 = row.audio_filepath;
+
+        let html = `
+          <div class="fw-bold mb-1">Segment ${row.segment}</div>
+          <textarea rows="3">${text}</textarea>
+        `;
+
+        if (audioBase64) {
+          html += `
+            <audio controls>
+              <source src="data:audio/flac;base64,${audioBase64}">
+            </audio>
+          `;
+        } else {
+          html += `<div class="text-muted small">⚠ No audio</div>`;
+        }
+
+        li.innerHTML = html;
+        segmentList.appendChild(li);
+      });
+    });
+
+    loadParquetFiles();
+  </script>
+</body>
+</html>
