@@ -1,4 +1,5 @@
-duckdb
 fastapi
-ast
-base64
+uvicorn[standard]
+pandas
+python-multipart
+pydantic
