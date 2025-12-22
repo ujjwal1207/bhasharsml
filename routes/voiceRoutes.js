@@ -1,33 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const voiceController = require('../controllers/voiceController');
+const { protect } = require('../middleware/auth');
 
 /**
  * @route   GET /api/batches
  * @desc    Get maximum batch number
- * @access  Public
+ * @access  Private (requires authentication)
  */
-router.get('/batches', voiceController.getMaxBatch);
+router.get('/batches', protect, voiceController.getMaxBatch);
 
 /**
  * @route   GET /api/batch/:batch_id/files
  * @desc    Get maximum file number for a specific batch
- * @access  Public
+ * @access  Private (requires authentication)
  */
-router.get('/batch/:batch_id/files', voiceController.getMaxFile);
+router.get('/batch/:batch_id/files', protect, voiceController.getMaxFile);
 
 /**
  * @route   GET /api/batch/:batch_id/file/:file_number
  * @desc    Get all segments for a specific batch and file
- * @access  Public
+ * @access  Private (requires authentication)
  */
-router.get('/batch/:batch_id/file/:file_number', voiceController.getFile);
+router.get('/batch/:batch_id/file/:file_number', protect, voiceController.getFile);
 
 /**
  * @route   POST /api/batch/:batch_id/file/:file_number/save
  * @desc    Save RSML data for specific segments
- * @access  Public
+ * @access  Private (requires authentication)
  */
-router.post('/batch/:batch_id/file/:file_number/save', voiceController.saveRsml);
+router.post('/batch/:batch_id/file/:file_number/save', protect, voiceController.saveRsml);
 
 module.exports = router;

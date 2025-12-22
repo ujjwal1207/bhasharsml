@@ -1,3 +1,6 @@
+// Load environment variables first
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
@@ -5,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const connectDB = require('./config/database');
 const voiceRoutes = require('./routes/voiceRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 // ---------------- CONFIG ---------------- //
 
@@ -35,8 +39,9 @@ app.use(compression({
 // -------- Static Audio Serving -------- //
 
 if (!fs.existsSync(AUDIO_DIR)) {
-  console.error(`❌ ${AUDIO_DIR} directory not found`);
-  process.exit(1);
+  console.warn(`⚠️  ${AUDIO_DIR} directory not found. Creating it now...`);
+  fs.mkdirSync(AUDIO_DIR, { recursive: true });
+  console.log(`✅ Created ${AUDIO_DIR} directory`);
 }
 
 app.use('/data/audio', express.static(AUDIO_DIR));
@@ -55,6 +60,39 @@ app.get('/', (req, res) => {
 
 // -------- API Routes -------- //
 
+// Health check endpoint (public)
+app.get('/api/health', async (req, res) => {
+  try {
+    const healthStatus = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      database: {
+        status: 'connected',
+        name: require('mongoose').connection.name,
+        host: require('mongoose').connection.host
+      },
+      server: {
+        port: PORT,
+        audioDirectory: fs.existsSync(AUDIO_DIR) ? 'available' : 'unavailable'
+      }
+    };
+    
+    res.status(200).json(healthStatus);
+  } catch (error) {
+    res.status(503).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// Authentication routes (public)
+app.use('/api/auth', authRoutes);
+
+// Voice routes (protected - require authentication)
 app.use('/api', voiceRoutes);
 
 // -------- Error Handling Middleware -------- //
