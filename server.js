@@ -46,17 +46,14 @@ if (!fs.existsSync(AUDIO_DIR)) {
 
 app.use('/data/audio', express.static(AUDIO_DIR));
 
-// -------- Serve Index HTML -------- //
+// -------- Serve React App -------- //
 
-app.get('/', (req, res) => {
-  const indexPath = path.join(__dirname, 'index.html');
-  
-  if (!fs.existsSync(indexPath)) {
-    return res.status(404).json({ error: 'index.html not found' });
-  }
-  
-  res.sendFile(indexPath);
-});
+// Serve static files from the React app build
+const clientBuildPath = path.join(__dirname, 'client', 'build');
+if (fs.existsSync(clientBuildPath)) {
+  app.use(express.static(clientBuildPath));
+  console.log('✅ Serving React app from client/build');
+}
 
 // -------- API Routes -------- //
 
@@ -104,10 +101,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-// -------- 404 Handler -------- //
+// -------- Serve React App for all other routes (SPA fallback) -------- //
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+app.get('*', (req, res) => {
+  const clientBuildPath = path.join(__dirname, 'client', 'build', 'index.html');
+  
+  if (fs.existsSync(clientBuildPath)) {
+    res.sendFile(clientBuildPath);
+  } else {
+    res.status(404).json({ 
+      error: 'React app not found. Please run "npm run build" in the client directory.' 
+    });
+  }
 });
 
 // -------- Connect to Database & Start Server -------- //
