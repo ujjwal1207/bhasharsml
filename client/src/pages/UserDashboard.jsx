@@ -55,9 +55,23 @@ const UserDashboard = () => {
 
         <div className="welcome-card">
           <h3>Welcome to BhashaCheck</h3>
-          <p>
-            You're all set! Your account is active and ready to go.
-          </p>
+          {user?.isApproved ? (
+            <>
+              <p>Your account is active and ready to go!</p>
+              <button 
+                className="btn btn-primary"
+                onClick={() => navigate('/annotate')}
+                style={{ marginTop: '1rem' }}
+              >
+                Start Annotating
+              </button>
+            </>
+          ) : (
+            <p>
+              Your account is pending approval. Once approved by an administrator, 
+              you'll be able to access the RSML annotation tool.
+            </p>
+          )}
         </div>
       </main>
     </div>

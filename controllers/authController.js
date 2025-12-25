@@ -91,8 +91,8 @@ const login = async (req, res) => {
       });
     }
 
-    // Check if user is approved
-    if (!user.isApproved) {
+    // Check if user is approved (skip check for admins)
+    if (!user.isApproved && user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Your account is pending approval from an administrator'

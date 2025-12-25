@@ -31,7 +31,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Compression Middleware (similar to GZip in FastAPI)
+// Compression Middleware
 app.use(compression({
   threshold: 1000 // minimum size in bytes before compression
 }));

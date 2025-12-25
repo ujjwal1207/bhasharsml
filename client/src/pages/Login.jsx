@@ -55,7 +55,7 @@ const Login = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1>Login</h1>
+        <h1 >Login</h1>
         <p className="auth-subtitle">Welcome back to BhashaCheck</p>
         
         {error && <div className="error-message">{error}</div>}
@@ -92,6 +92,7 @@ const Login = () => {
             type="submit" 
             className="btn btn-primary"
             disabled={loading}
+            style={{ textAlign: 'center' }}
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>

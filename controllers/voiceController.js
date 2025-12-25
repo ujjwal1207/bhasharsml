@@ -2,7 +2,6 @@ const Voice = require('../models/Voice');
 
 /**
  * Get maximum batch number
- * Equivalent to Python's /batches route
  */
 exports.getMaxBatch = async (req, res) => {
   try {
@@ -30,7 +29,6 @@ exports.getMaxBatch = async (req, res) => {
 
 /**
  * Get maximum file number for a specific batch
- * Equivalent to Python's /batch/{batch_id}/files route
  */
 exports.getMaxFile = async (req, res) => {
   try {
@@ -69,7 +67,6 @@ exports.getMaxFile = async (req, res) => {
 
 /**
  * Get all data for a specific batch and file
- * Equivalent to Python's /batch/{batch_id}/file/{file_number} route
  */
 exports.getFile = async (req, res) => {
   try {
@@ -104,7 +101,6 @@ exports.getFile = async (req, res) => {
 
 /**
  * Save RSML data for specific segments
- * Equivalent to Python's /batch/{batch_id}/file/{file_number}/save route
  */
 exports.saveRsml = async (req, res) => {
   try {

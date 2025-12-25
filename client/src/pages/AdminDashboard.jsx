@@ -136,6 +136,13 @@ const AdminDashboard = () => {
         <div className="header-content">
           <h1>Admin Panel</h1>
           <div className="header-user">
+            <button 
+              onClick={() => navigate('/annotate')} 
+              className="btn btn-primary"
+              style={{ marginRight: '1rem' }}
+            >
+              RSML Annotator
+            </button>
             <span>Hey {user?.name} 👋</span>
             <button onClick={handleLogout} className="btn btn-secondary">
               Logout

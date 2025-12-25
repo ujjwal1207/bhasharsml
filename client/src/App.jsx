@@ -6,12 +6,13 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import RSMLAnnotation from './pages/RSMLAnnotation';
 import './App.css';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="App">
           <Routes>
             {/* Public routes */}
@@ -34,6 +35,16 @@ function App() {
               element={
                 <PrivateRoute adminOnly={true}>
                   <AdminDashboard />
+                </PrivateRoute>
+              }
+            />
+            
+            {/* RSML Annotation - Admin and Approved Users */}
+            <Route
+              path="/annotate"
+              element={
+                <PrivateRoute requireApproval={true}>
+                  <RSMLAnnotation />
                 </PrivateRoute>
               }
             />

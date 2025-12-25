@@ -1,6 +1,6 @@
-# BhashaCheck API - Node.js/Express
+# BhashaCheck API - MERN Stack
 
-A Node.js/Express API server for managing voice data with MongoDB, converted from Python FastAPI.
+A full-stack MERN (MongoDB, Express, React, Node.js) application for managing voice data with authentication.
 
 ## 🚀 Features
 
@@ -168,18 +168,7 @@ GET /data/audio/:filename
 ```
 **Example:** `GET /data/audio/te-1-1-1.wav`
 
-## 🔄 Comparison: Python vs Node.js
-
-| Feature | Python (FastAPI) | Node.js (Express) |
-|---------|-----------------|-------------------|
-| Web Framework | FastAPI | Express |
-| Data Storage | CSV (Pandas) | MongoDB (Mongoose) |
-| CORS | CORSMiddleware | cors package |
-| Compression | GZipMiddleware | compression package |
-| Data Validation | Pydantic | Manual validation |
-| Async Support | Native async/await | Native async/await |
-
-## 🔧 Environment Variables
+##  Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -211,11 +200,10 @@ curl http://localhost:3000/api/batches
 
 ## 📝 Notes
 
-- The original Python server used CSV with Pandas for data storage
-- This Node.js version uses MongoDB for better scalability and performance
+- This is a full MERN stack application with MongoDB database
 - All CSV data must be imported into MongoDB before using the API
 - Audio files should be placed in the `data/audio/` directory
-- The API maintains the same endpoint structure as the Python version
+- The application includes JWT-based authentication for secure access
 
 ## 🤝 Contributing
 
