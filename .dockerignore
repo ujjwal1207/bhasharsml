@@ -1,0 +1,47 @@
+# Node modules
+node_modules
+npm-debug.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Client folder (has its own Dockerfile)
+client
+
+# Git files
+.git
+.gitignore
+
+# Scripts
+scripts
+
+# Documentation
+*.md
+LICENSE
+
+# Test files
+test
+tests
+*.test.js
+*.spec.js
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Temporary files
+tmp
+temp

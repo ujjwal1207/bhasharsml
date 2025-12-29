@@ -49,7 +49,7 @@ const RSMLAnnotation = () => {
   const loadBatches = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/batches`, {
+      const res = await fetch(`${API_BASE}/batches/list`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -65,8 +65,7 @@ const RSMLAnnotation = () => {
       }
       
       const data = await res.json();
-      const batchArray = Array.from({ length: data.max_batch }, (_, i) => i + 1);
-      setBatches(batchArray);
+      setBatches(data.batches);
     } catch (err) {
       setError('Failed to load batches');
       console.error(err);
@@ -76,15 +75,14 @@ const RSMLAnnotation = () => {
   const loadFiles = async (batch) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/batch/${batch}/files`, {
+      const res = await fetch(`${API_BASE}/batch/${batch}/files/list`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       const data = await res.json();
-      const fileArray = Array.from({ length: data.max_file }, (_, i) => i + 1);
-      setFiles(fileArray);
-      return fileArray;
+      setFiles(data.files);
+      return data.files;
     } catch (err) {
       setError('Failed to load files');
       console.error(err);

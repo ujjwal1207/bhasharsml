@@ -1,6 +1,54 @@
 const Voice = require('../models/Voice');
 
 /**
+ * Get list of all available batches
+ */
+exports.getAllBatches = async (req, res) => {
+  try {
+    const batches = await Voice.distinct('batch');
+    
+    if (!batches || batches.length === 0) {
+      return res.status(404).json({ error: 'No batches found' });
+    }
+
+    // Sort numerically
+    const sortedBatches = batches.map(b => String(b)).sort((a, b) => parseInt(a) - parseInt(b));
+    
+    res.json({
+      batches: sortedBatches
+    });
+  } catch (error) {
+    console.error('Error in getAllBatches:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Get list of all available files for a specific batch
+ */
+exports.getAllFiles = async (req, res) => {
+  try {
+    const { batch_id } = req.params;
+
+    const files = await Voice.distinct('file', { batch: batch_id });
+    
+    if (!files || files.length === 0) {
+      return res.status(404).json({ error: `No files found for batch ${batch_id}` });
+    }
+
+    // Sort numerically
+    const sortedFiles = files.map(f => String(f)).sort((a, b) => parseInt(a) - parseInt(b));
+    
+    res.json({
+      files: sortedFiles
+    });
+  } catch (error) {
+    console.error('Error in getAllFiles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
  * Get maximum batch number
  */
 exports.getMaxBatch = async (req, res) => {

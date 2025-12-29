@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const Voice = require('../models/Voice');
 require('dotenv').config();
 
-const CSV_FILE = 'indicvoices_rsml_ready.csv';
+const CSV_FILE = './data/indicvoices_rsml_ready.csv';
 
 const importData = async () => {
   try {

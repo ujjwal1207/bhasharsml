@@ -4,6 +4,20 @@ const voiceController = require('../controllers/voiceController');
 const { protect } = require('../middleware/auth');
 
 /**
+ * @route   GET /api/batches/list
+ * @desc    Get list of all available batches
+ * @access  Private (requires authentication)
+ */
+router.get('/batches/list', protect, voiceController.getAllBatches);
+
+/**
+ * @route   GET /api/batch/:batch_id/files/list
+ * @desc    Get list of all available files for a specific batch
+ * @access  Private (requires authentication)
+ */
+router.get('/batch/:batch_id/files/list', protect, voiceController.getAllFiles);
+
+/**
  * @route   GET /api/batches
  * @desc    Get maximum batch number
  * @access  Private (requires authentication)

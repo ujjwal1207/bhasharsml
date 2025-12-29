@@ -1,0 +1,43 @@
+# Node modules
+node_modules
+npm-debug.log
+
+# Build output (will be created during build)
+build
+dist
+
+# Environment files
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# Test files
+test
+tests
+*.test.js
+*.test.jsx
+*.spec.js
+*.spec.jsx
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
